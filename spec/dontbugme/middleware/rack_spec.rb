@@ -32,6 +32,18 @@ RSpec.describe Dontbugme::Middleware::Rack do
     expect(body).to eq('Hello')
   end
 
+  it 'returns response that Puma can process (status.to_i, etc.)' do
+    # Puma calls response[0].to_i on the status - must not receive a Trace object
+    response = app.call(Rack::MockRequest.env_for('/'))
+    expect(response).to be_an(Array)
+    expect(response.size).to eq(3)
+    expect(response[0]).to eq(200)
+    expect(response[0]).to respond_to(:to_i)
+    expect(response[0].to_i).to eq(200)
+    expect(response[1]).to be_a(Hash)
+    expect(response[2]).to respond_to(:each)
+  end
+
   it 'records the request as a trace when recording is on' do
     get '/api/users'
     traces = Dontbugme.store.search(limit: 5)

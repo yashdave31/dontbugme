@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    dontbugme (0.1.1)
+    dontbugme (0.1.3)
       sqlite3 (~> 1.6)
       thor (~> 1.0)
 
