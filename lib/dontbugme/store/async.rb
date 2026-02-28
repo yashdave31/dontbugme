@@ -6,10 +6,12 @@ module Dontbugme
       def initialize(backend)
         @backend = backend
         @queue = Queue.new
+        @pid = Process.pid
         @thread = start_worker
       end
 
       def save_trace(trace)
+        restart_worker_if_forked
         @queue << [:save, trace]
       end
 
@@ -22,10 +24,18 @@ module Dontbugme
       end
 
       def cleanup(before:)
+        restart_worker_if_forked
         @queue << [:cleanup, before]
       end
 
       private
+
+      def restart_worker_if_forked
+        return if Process.pid == @pid
+
+        @pid = Process.pid
+        @thread = start_worker
+      end
 
       def start_worker
         Thread.new do
@@ -37,6 +47,8 @@ module Dontbugme
             when :cleanup
               @backend.cleanup(before: arg)
             end
+          rescue StandardError => e
+            warn "[Dontbugme] Async store error: #{e.class} #{e.message}"
           end
         end
       end

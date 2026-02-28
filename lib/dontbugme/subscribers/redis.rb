@@ -20,7 +20,7 @@ module Dontbugme
           result = super
           duration_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - start_time).round(2)
 
-          record_span(command, start_wall, duration_ms)
+          record_span(command, start_wall, duration_ms, result: result)
           result
         rescue StandardError => e
           duration_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - start_time).round(2)
@@ -30,7 +30,7 @@ module Dontbugme
 
         private
 
-        def record_span(command, start_wall, duration_ms, error: nil)
+        def record_span(command, start_wall, duration_ms, result: nil, error: nil)
           cmd = Array(command).map(&:to_s)
           operation = cmd.first&.upcase || 'UNKNOWN'
           detail = cmd.join(' ')
@@ -39,6 +39,9 @@ module Dontbugme
           payload = { command: operation }
           if config.capture_redis_values && cmd.size > 1
             payload[:args] = cmd[1..].map { |a| truncate(a, config.max_redis_value_size) }
+          end
+          if config.capture_redis_return_values && result && !error
+            payload[:output] = truncate_value(result, config.max_redis_value_size)
           end
           payload[:error] = error.message if error
 
@@ -56,6 +59,13 @@ module Dontbugme
           return str if str.to_s.bytesize <= max
 
           "#{str.to_s.byteslice(0, max)}[truncated]"
+        end
+
+        def truncate_value(val, max)
+          str = val.to_s
+          return str if str.bytesize <= max
+
+          "#{str.byteslice(0, max)}[truncated]"
         end
       end
     end

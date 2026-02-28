@@ -24,7 +24,7 @@ module Dontbugme
       @trace_a = params[:a].present? ? store.find_trace(params[:a]) : nil
       @trace_b = params[:b].present? ? store.find_trace(params[:b]) : nil
       @diff_output = if @trace_a && @trace_b
-        Formatters::Diff.format(@trace_a, @trace_b)
+        Dontbugme::Formatters::Diff.format(@trace_a, @trace_b)
       else
         nil
       end

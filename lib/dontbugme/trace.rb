@@ -43,7 +43,7 @@ module Dontbugme
     end
 
     def raw_spans
-      @spans.freeze
+      @spans.dup
     end
 
     def finish!(error: nil)
@@ -74,12 +74,13 @@ module Dontbugme
     end
 
     def to_h
+      finished_at_time = @finished_at ? (@started_at_utc + (duration_ms || 0) / 1000.0) : nil
       {
         id: id,
         kind: kind,
         identifier: identifier,
         started_at: format_time(started_at_utc),
-        finished_at: @finished_at ? format_time(Time.at(@finished_at / 1000.0).utc) : nil,
+        finished_at: finished_at_time ? format_time(finished_at_time) : nil,
         duration_ms: duration_ms,
         status: status,
         error: error,

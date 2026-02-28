@@ -2,6 +2,8 @@
 vendor/bundle/
 .bundle/
 
+# Dev test app
+dev/test_app/vendor
 # Built gems
 *.gem
 

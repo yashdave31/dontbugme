@@ -9,6 +9,7 @@ module Dontbugme
 
       def call(env)
         return @app.call(env) unless Dontbugme.config.recording?
+        return @app.call(env) unless Dontbugme.config.should_record_request?(env)
 
         request = ::Rack::Request.new(env)
         request_id = env['action_dispatch.request_id'] || request.get_header('HTTP_X_REQUEST_ID') || SecureRandom.uuid

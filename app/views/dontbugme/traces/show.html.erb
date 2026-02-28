@@ -1,15 +1,96 @@
-<div class="card">
-  <h2 style="margin: 0 0 8px; font-size: 16px;"><%= @trace.identifier %></h2>
-  <p style="margin: 0 0 16px; color: #6b7280; font-size: 12px;">
-    <%= @trace.id %> · <%= @trace.status %> · <%= @trace.duration_ms ? "#{@trace.duration_ms.round}ms" : 'N/A' %>
-    <% if @trace.correlation_id.present? %>
-      · <%= link_to "Follow chain", root_path(correlation_id: @trace.correlation_id) %>
-    <% end %>
-  </p>
-  <div class="timeline"><%= Formatters::Timeline.format(@trace) %></div>
+<div class="trace-header card">
+  <div class="trace-header-top">
+    <h2 class="trace-title"><%= @trace.identifier %></h2>
+    <div class="trace-meta">
+      <span class="badge <%= @trace.status == :success ? 'badge-success' : 'badge-error' %>"><%= @trace.status %></span>
+      <span class="trace-meta-item"><%= @trace.duration_ms ? "#{@trace.duration_ms.round}ms" : 'N/A' %></span>
+      <span class="trace-meta-item"><%= @trace.id %></span>
+      <% if @trace.correlation_id.present? %>
+        <%= link_to "Follow chain", root_path(correlation_id: @trace.correlation_id), class: 'trace-link' %>
+      <% end %>
+    </div>
+  </div>
+  <div class="trace-actions">
+    <%= link_to '← Back to traces', root_path, class: 'btn btn-secondary' %>
+    <%= link_to 'Compare with another', diff_path(a: @trace.id), class: 'btn btn-secondary' %>
+  </div>
 </div>
 
-<p style="margin-top: 16px;">
-  <%= link_to '← Back to traces', root_path %> ·
-  <%= link_to 'Compare with another trace', diff_path(a: @trace.id) %>
-</p>
+<% if params[:only].present? %>
+  <p class="filter-hint">Filtering by: <strong><%= params[:only] %></strong> · <%= link_to 'Show all', trace_path(@trace.id) %></p>
+<% end %>
+
+<div class="timeline-viz">
+  <div class="timeline-bar" style="--total-ms: <%= [@trace.duration_ms || 1, 1].max %>;">
+    <% @trace.raw_spans.each do |span| %>
+      <% next if params[:only].present? && span.category.to_s != params[:only] %>
+      <% width = span.duration_ms.to_f > 0 ? [(span.duration_ms / (@trace.duration_ms || 1) * 100).round(1), 2].max : 2 %>
+      <span class="timeline-segment badge-<%= span.category %>" style="width: <%= width %>%;" title="<%= span.category %> <%= span.duration_ms.round(1) %>ms"></span>
+    <% end %>
+  </div>
+</div>
+
+<div class="spans-list">
+  <% spans_to_show = params[:only].present? ? @trace.raw_spans.select { |s| s.category.to_s == params[:only] } : @trace.raw_spans %>
+  <% spans_to_show.each_with_index do |span, idx| %>
+    <details class="span-card card" data-category="<%= span.category %>">
+      <summary class="span-summary">
+        <span class="span-offset"><%= span.started_at.to_f.round(1) %>ms</span>
+        <span class="span-duration"><%= span.duration_ms ? "#{span.duration_ms.round(1)}ms" : '-' %></span>
+        <span class="badge <%= span_category_badge_class(span.category) %>"><%= span.category.to_s.upcase %></span>
+        <span class="span-operation"><%= span.operation %></span>
+        <span class="span-detail-preview"><%= truncate_detail(span.detail, 80) %></span>
+      </summary>
+      <div class="span-details">
+        <% if span_output(span).present? %>
+          <div class="span-section span-output-section">
+            <h4>Output <button type="button" class="copy-btn" data-copy-target="output-<%= idx %>" title="Copy">Copy</button></h4>
+            <pre class="code-block output-block" id="output-<%= idx %>"><code><%= h(span_output(span)) %></code></pre>
+          </div>
+        <% end %>
+        <div class="span-section">
+          <h4>Detail <button type="button" class="copy-btn" data-copy-target="detail-<%= idx %>" title="Copy">Copy</button></h4>
+          <pre class="code-block" id="detail-<%= idx %>"><code><%= h(format_span_detail_for_display(span)) %></code></pre>
+        </div>
+        <% if format_span_payload(span).any? %>
+          <div class="span-section">
+            <h4>Inputs</h4>
+            <dl class="payload-list">
+              <% format_span_payload(span).each do |key, value| %>
+                <div class="payload-row">
+                  <dt><%= key %></dt>
+                  <dd><pre class="payload-value"><%= h(value) %></pre></dd>
+                </div>
+              <% end %>
+            </dl>
+          </div>
+        <% end %>
+        <% if span.source.present? %>
+          <div class="span-section">
+            <h4>Source</h4>
+            <code class="source-location"><%= h(span.source) %></code>
+          </div>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+</div>
+
+<% if @trace.truncated_spans_count.to_i.positive? %>
+  <p class="truncated-notice">+ <%= @trace.truncated_spans_count %> additional spans truncated</p>
+<% end %>
+
+<div class="trace-footer">
+  <p>Filter by category: <%= link_to 'All', trace_path(@trace.id) %> · <%= link_to 'SQL', trace_path(@trace.id, only: 'sql') %> · <%= link_to 'HTTP', trace_path(@trace.id, only: 'http') %> · <%= link_to 'Redis', trace_path(@trace.id, only: 'redis') %> · <%= link_to 'Cache', trace_path(@trace.id, only: 'cache') %> · <%= link_to 'Mailer', trace_path(@trace.id, only: 'mailer') %> · <%= link_to 'Enqueue', trace_path(@trace.id, only: 'enqueue') %></p>
+</div>
+
+<% if @trace.error.present? %>
+  <div class="card error-card">
+    <h3>Error</h3>
+    <pre class="code-block error-detail"><%= h(@trace.error[:message] || @trace.error['message']) %></pre>
+    <% bt = @trace.error[:backtrace] || @trace.error['backtrace'] %>
+    <% if bt.present? %>
+      <pre class="code-block backtrace"><%= Array(bt).map { |l| h(l) }.join("\n") %></pre>
+    <% end %>
+  </div>
+<% end %>

@@ -24,7 +24,7 @@ module Dontbugme
       Recorder.record(kind: :custom, identifier: identifier, metadata: metadata, return_trace: true, &block)
     end
 
-    def span(name, payload: {}, &block)
+    def span(name, payload: {}, capture_output: true, &block)
       return yield unless Context.active?
 
       start_mono = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
@@ -32,11 +32,16 @@ module Dontbugme
       result = yield
       duration_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - start_mono).round(2)
 
+      span_payload = payload.dup
+      if capture_output && config.capture_span_output
+        span_payload[:output] = format_output_value(result)
+      end
+
       Recorder.add_span(
         category: :custom,
         operation: 'span',
         detail: name.to_s,
-        payload: payload,
+        payload: span_payload,
         duration_ms: duration_ms,
         started_at: start_wall
       )
@@ -64,6 +69,52 @@ module Dontbugme
     end
 
     private
+
+    def format_output_value(val)
+      return nil if val.nil?
+
+      max = config.max_span_detail_size
+      str = if val.is_a?(Array)
+              format_array(val)
+            elsif val.is_a?(Hash)
+              format_hash(val)
+            elsif defined?(ActiveRecord::Base) && val.is_a?(ActiveRecord::Base)
+              val.inspect
+            elsif defined?(ActiveRecord::Relation) && val.is_a?(ActiveRecord::Relation)
+              "#{val.to_sql} (relation)"
+            else
+              val.to_s
+            end
+      str.bytesize > max ? "#{str.byteslice(0, max)}...[truncated]" : str
+    rescue StandardError
+      val.class.name
+    end
+
+    def format_array(ary)
+      return '[]' if ary.empty?
+
+      preview = ary.first(5).map { |v| format_single_value(v) }.join(', ')
+      ary.size > 5 ? "[#{preview}, ... (#{ary.size} total)]" : "[#{preview}]"
+    end
+
+    def format_hash(hash)
+      return '{}' if hash.empty?
+
+      preview = hash.first(5).map { |k, v| "#{k}: #{format_single_value(v)}" }.join(', ')
+      hash.size > 5 ? "{#{preview}, ...}" : "{#{preview}}"
+    end
+
+    def format_single_value(v)
+      if defined?(ActiveRecord::Base) && v.is_a?(ActiveRecord::Base)
+        v.respond_to?(:id) ? "#<#{v.class.name} id=#{v.id}>" : "#<#{v.class.name}>"
+      elsif v.is_a?(Hash)
+        '{...}'
+      elsif v.is_a?(Array)
+        '[...]'
+      else
+        v.to_s
+      end
+    end
 
     def build_store
       store = case config.store

@@ -7,6 +7,7 @@ module Dontbugme
         return yield unless Dontbugme.config.recording?
 
         job_class = job['class'] || job[:class] || 'Unknown'
+        return yield unless Dontbugme.config.should_record_job?(job_class)
         jid = job['jid'] || job[:jid] || SecureRandom.hex(8)
         correlation_id = job['correlation_id'] || job[:correlation_id] || Correlation.current
         Correlation.current = correlation_id

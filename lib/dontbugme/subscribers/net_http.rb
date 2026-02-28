@@ -41,6 +41,10 @@ module Dontbugme
           }
           payload[:error] = error.message if error
 
+          if config.capture_http_body && response&.body
+            payload[:response_body] = truncate(response.body, config.max_http_body_size)
+          end
+
           if config.capture_http_headers&.any?
             payload[:request_headers] = capture_headers(req, config.capture_http_headers)
           end

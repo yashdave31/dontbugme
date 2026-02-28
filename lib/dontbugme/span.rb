@@ -38,7 +38,7 @@ module Dontbugme
     end
 
     def self.from_h(hash)
-      new(
+      span = new(
         category: hash[:category] || hash['category'],
         operation: hash[:operation] || hash['operation'],
         detail: hash[:detail] || hash['detail'],
@@ -47,6 +47,8 @@ module Dontbugme
         duration_ms: hash[:duration_ms] || hash['duration_ms'],
         source: hash[:source] || hash['source']
       )
+      span.instance_variable_set(:@id, (hash[:id] || hash['id']).to_s) if hash[:id] || hash['id']
+      span
     end
 
     private

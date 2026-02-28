@@ -2,7 +2,7 @@
 
 module Dontbugme
   module Subscribers
-    class ActiveJob
+    class ActiveJob < Base
       EVENT = 'enqueue.active_job'
 
       def self.subscribe

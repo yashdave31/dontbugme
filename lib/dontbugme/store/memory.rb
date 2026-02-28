@@ -24,7 +24,7 @@ module Dontbugme
       def search(filters = {})
         traces = @mutex.synchronize { @traces.values.dup }
         traces = apply_filters(traces, filters)
-        traces.sort_by { |t| t[:started_at] || '' }.reverse.map { |h| Trace.from_h(h) }
+        traces.map { |h| Trace.from_h(h) }
       end
 
       def cleanup(before:)
@@ -37,8 +37,8 @@ module Dontbugme
       private
 
       def apply_filters(traces, filters)
-        traces = traces.select { |t| t[:status] == filters[:status].to_s } if filters[:status]
-        traces = traces.select { |t| t[:status] == filters['status'].to_s } if filters['status']
+        traces = traces.select { |t| t[:status].to_s == filters[:status].to_s } if filters[:status]
+        traces = traces.select { |t| t[:status].to_s == filters['status'].to_s } if filters['status']
         traces = traces.select { |t| t[:kind].to_s == filters[:kind].to_s } if filters[:kind]
         if filters[:identifier]
           pattern = /#{Regexp.escape(filters[:identifier].to_s)}/i
@@ -48,8 +48,8 @@ module Dontbugme
           cid = filters[:correlation_id].to_s
           traces = traces.select { |t| (t[:correlation_id] || t.dig(:metadata, :correlation_id)).to_s == cid }
         end
-        traces = traces.first(filters[:limit] || filters['limit'] || 100)
-        traces
+        limit = filters[:limit] || filters['limit'] || 100
+        traces.sort_by { |t| t[:started_at] || '' }.reverse.first(limit)
       end
 
       def parse_time(val)

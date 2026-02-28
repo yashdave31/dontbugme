@@ -2,7 +2,7 @@
 
 module Dontbugme
   module Subscribers
-    class ActionMailer
+    class ActionMailer < Base
       EVENT = 'deliver.action_mailer'
 
       def self.subscribe

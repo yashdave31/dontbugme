@@ -114,17 +114,19 @@ puts trace.to_timeline
 
 ### Manual Spans and Snapshots
 
-Add custom spans and snapshots within a trace:
+Add custom spans and snapshots within a trace. Spans capture the **return value** by default so you can see outputs in the UI:
 
 ```ruby
 trace = Dontbugme.trace("checkout flow") do
   Dontbugme.span("Calculate tax") do
-    tax = order.calculate_tax
+    tax = order.calculate_tax  # output shown in UI
   end
   Dontbugme.snapshot(user: user.attributes.slice("id", "email"), total: order.total)
   Dontbugme.tag(customer_tier: "enterprise")
 end
 ```
+
+Use `capture_output: false` to skip capturing the return value for sensitive data.
 
 ### Span Categories
 
@@ -185,6 +187,11 @@ Dontbugme.configure do |config|
   config.recording_mode = :always
   config.capture_sql_binds = true
   config.source_mode = :full
+
+  # Capture outputs for debugging (development only)
+  config.capture_span_output = true      # return values from Dontbugme.span
+  config.capture_http_body = true       # HTTP response bodies
+  config.capture_redis_return_values = true  # Redis command return values
 end
 ```
 

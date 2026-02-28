@@ -14,22 +14,7 @@ module Dontbugme
       def save_trace(trace)
         data = trace.to_h
         correlation_id = data[:correlation_id] || data[:metadata]&.dig(:correlation_id)
-        exec_params(
-          <<~SQL,
-            INSERT INTO dontbugme_traces
-            (id, kind, identifier, status, started_at, duration_ms, correlation_id, metadata_json, spans_json, error_json)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            ON CONFLICT (id) DO UPDATE SET
-              kind = EXCLUDED.kind,
-              identifier = EXCLUDED.identifier,
-              status = EXCLUDED.status,
-              started_at = EXCLUDED.started_at,
-              duration_ms = EXCLUDED.duration_ms,
-              correlation_id = EXCLUDED.correlation_id,
-              metadata_json = EXCLUDED.metadata_json,
-              spans_json = EXCLUDED.spans_json,
-              error_json = EXCLUDED.error_json
-          SQL
+        params = [
           data[:id],
           data[:kind].to_s,
           data[:identifier],
@@ -40,7 +25,22 @@ module Dontbugme
           data[:metadata].to_json,
           data[:spans].to_json,
           data[:error]&.to_json
-        )
+        ]
+        exec_params(<<~SQL, params)
+          INSERT INTO dontbugme_traces
+          (id, kind, identifier, status, started_at, duration_ms, correlation_id, metadata_json, spans_json, error_json)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          ON CONFLICT (id) DO UPDATE SET
+            kind = EXCLUDED.kind,
+            identifier = EXCLUDED.identifier,
+            status = EXCLUDED.status,
+            started_at = EXCLUDED.started_at,
+            duration_ms = EXCLUDED.duration_ms,
+            correlation_id = EXCLUDED.correlation_id,
+            metadata_json = EXCLUDED.metadata_json,
+            spans_json = EXCLUDED.spans_json,
+            error_json = EXCLUDED.error_json
+        SQL
       end
 
       def find_trace(trace_id)
@@ -92,6 +92,8 @@ module Dontbugme
         exec_params('DELETE FROM dontbugme_traces WHERE started_at < $1', [cutoff])
       end
 
+      private
+
       def query_result(sql, params)
         if conn.respond_to?(:exec_query)
           conn.exec_query(sql, 'Dontbugme', params)
@@ -105,8 +107,6 @@ module Dontbugme
 
         row
       end
-
-      private
 
       def conn
         @connection
@@ -159,8 +159,8 @@ module Dontbugme
         conn.execute('CREATE INDEX IF NOT EXISTS idx_dontbugme_started_at ON dontbugme_traces(started_at)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_dontbugme_status ON dontbugme_traces(status)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_dontbugme_correlation_id ON dontbugme_traces(correlation_id)')
-      rescue StandardError
-        # Schema might already exist
+      rescue StandardError => e
+        raise e if e.message !~ /already exists/i
       end
 
       def row_to_trace(row)

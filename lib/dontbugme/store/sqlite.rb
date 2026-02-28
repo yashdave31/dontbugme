@@ -75,7 +75,10 @@ module Dontbugme
       def db
         @db ||= begin
           require 'sqlite3'
-          SQLite3::Database.new(@path)
+          db = SQLite3::Database.new(@path)
+          db.execute('PRAGMA journal_mode=WAL')
+          db.execute('PRAGMA busy_timeout=5000')
+          db
         end
       end
 

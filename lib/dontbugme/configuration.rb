@@ -16,6 +16,8 @@ module Dontbugme
                   :capture_http_headers,
                   :capture_http_body,
                   :capture_redis_values,
+                  :capture_redis_return_values,
+                  :capture_span_output,
                   :source_mode,
                   :source_filter,
                   :source_depth,
@@ -63,6 +65,8 @@ module Dontbugme
       self.capture_http_headers = []
       self.capture_http_body = false
       self.capture_redis_values = false
+      self.capture_redis_return_values = true
+      self.capture_span_output = true
       self.source_mode = :full
       self.source_filter = %w[app/ lib/]
       self.source_depth = 3
@@ -95,6 +99,8 @@ module Dontbugme
       self.recording_mode = :selective
       self.record_on_error = true
       self.capture_sql_binds = false
+      self.capture_redis_return_values = false
+      self.capture_span_output = false
       self.source_mode = :shallow
       self.source_depth = 1
       self.source_stack_limit = 30
@@ -134,13 +140,11 @@ module Dontbugme
     private
 
     def retention_seconds(value, unit)
-      return value if value.is_a?(Integer)
-      return value.to_i if defined?(ActiveSupport) && value.respond_to?(:to_i)
-
       case unit
-      when :hours then value * 3600
-      when :days then value * 86400
-      else value
+      when nil, :seconds then value.to_i
+      when :hours then (value.to_f * 3600).to_i
+      when :days then (value.to_f * 86400).to_i
+      else value.to_i
       end
     end
   end

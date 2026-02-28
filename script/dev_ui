@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Run the dev test app to view the Dontbugme UI with dummy data.
+# Usage: ./script/dev_ui
+# Or:    script/dev_ui
+
+set -e
+
+cd "$(dirname "$0")/.."
+DEV_APP="dev/test_app"
+
+echo "==> Installing dependencies..."
+cd "$DEV_APP"
+bundle install
+cd ../..
+
+echo ""
+echo "==> Starting server..."
+echo ""
+echo "  1. Open http://localhost:3000/seed     (creates dummy traces, then redirects to UI)"
+echo "  2. Or open http://localhost:3000/inspector (view traces directly)"
+echo ""
+echo "  Dummy data includes: Request, Sidekiq, Error, Custom traces with"
+echo "  SQL, HTTP, Redis, Cache, Mailer, Enqueue, Custom, Snapshot spans."
+echo ""
+echo "  Press Ctrl+C to stop"
+echo ""
+
+cd "$DEV_APP"
+bundle exec rackup config.ru -p 3000

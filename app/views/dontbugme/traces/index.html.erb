@@ -1,5 +1,5 @@
 <%= form_with url: root_path, method: :get, local: true, class: 'filters' do |f| %>
-  <input type="text" name="q" value="<%= params[:q] %>" placeholder="Search identifier..." style="min-width: 200px;">
+  <input type="text" name="q" value="<%= params[:q] %>" placeholder="Search identifier..." style="min-width: 220px;">
   <select name="status">
     <option value="">All statuses</option>
     <option value="success" <%= params[:status] == 'success' ? 'selected' : '' %>>Success</option>
@@ -14,15 +14,15 @@
   <button type="submit">Filter</button>
 <% end %>
 
-<div class="card">
+<div class="card traces-list">
   <% if @traces.any? %>
     <% @traces.each do |trace| %>
-      <div class="trace-row">
-        <span class="trace-id"><%= link_to trace.id, trace_path(trace.id) %></span>
+      <%= link_to trace_path(trace.id), class: 'trace-row trace-row-link' do %>
+        <span class="trace-id"><%= trace.id %></span>
         <span class="trace-identifier"><%= trace.identifier %></span>
         <span class="badge <%= trace.status == :success ? 'badge-success' : 'badge-error' %>"><%= trace.status %></span>
         <span class="trace-duration"><%= trace.duration_ms ? "#{trace.duration_ms.round}ms" : '-' %></span>
-      </div>
+      <% end %>
     <% end %>
   <% else %>
     <p class="empty">No traces found. Run your app and execute some jobs or requests.</p>
