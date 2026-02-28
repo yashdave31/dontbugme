@@ -1,0 +1,30 @@
+<%= form_with url: root_path, method: :get, local: true, class: 'filters' do |f| %>
+  <input type="text" name="q" value="<%= params[:q] %>" placeholder="Search identifier..." style="min-width: 200px;">
+  <select name="status">
+    <option value="">All statuses</option>
+    <option value="success" <%= params[:status] == 'success' ? 'selected' : '' %>>Success</option>
+    <option value="error" <%= params[:status] == 'error' ? 'selected' : '' %>>Error</option>
+  </select>
+  <select name="kind">
+    <option value="">All kinds</option>
+    <option value="sidekiq" <%= params[:kind] == 'sidekiq' ? 'selected' : '' %>>Sidekiq</option>
+    <option value="request" <%= params[:kind] == 'request' ? 'selected' : '' %>>Request</option>
+    <option value="custom" <%= params[:kind] == 'custom' ? 'selected' : '' %>>Custom</option>
+  </select>
+  <button type="submit">Filter</button>
+<% end %>
+
+<div class="card">
+  <% if @traces.any? %>
+    <% @traces.each do |trace| %>
+      <div class="trace-row">
+        <span class="trace-id"><%= link_to trace.id, trace_path(trace.id) %></span>
+        <span class="trace-identifier"><%= trace.identifier %></span>
+        <span class="badge <%= trace.status == :success ? 'badge-success' : 'badge-error' %>"><%= trace.status %></span>
+        <span class="trace-duration"><%= trace.duration_ms ? "#{trace.duration_ms.round}ms" : '-' %></span>
+      </div>
+    <% end %>
+  <% else %>
+    <p class="empty">No traces found. Run your app and execute some jobs or requests.</p>
+  <% end %>
+</div>

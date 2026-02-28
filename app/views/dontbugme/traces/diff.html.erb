@@ -1,0 +1,18 @@
+<%= form_with url: diff_path, method: :get, local: true, class: 'diff-form' do %>
+  <input type="text" name="a" value="<%= params[:a] %>" placeholder="Trace A ID (e.g. tr_abc123)">
+  <span>vs</span>
+  <input type="text" name="b" value="<%= params[:b] %>" placeholder="Trace B ID (e.g. tr_def456)">
+  <button type="submit">Compare</button>
+<% end %>
+
+<% if @diff_output %>
+  <div class="card">
+    <div class="diff-output"><%= @diff_output %></div>
+  </div>
+<% elsif params[:a].present? || params[:b].present? %>
+  <p class="empty">Enter two trace IDs to compare. Use the trace list to find IDs.</p>
+<% else %>
+  <p class="empty">Enter two trace IDs above to see what changed between two executions.</p>
+<% end %>
+
+<p style="margin-top: 16px;"><%= link_to '← Back to traces', root_path %></p>

@@ -1,0 +1,40 @@
+# Dependencies
+vendor/bundle/
+.bundle/
+
+# Built gems
+*.gem
+
+# Temporary files
+tmp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# SQLite databases (inspector/test)
+*.db
+*.sqlite3
+
+# Logs
+log/
+*.log
+
+# Coverage and test artifacts
+coverage/
+.rspec_status
+.ruby-version
+
+# IDE and editor
+.idea/
+.vscode/
+*.sublime-*
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,15 @@
+<div class="card">
+  <h2 style="margin: 0 0 8px; font-size: 16px;"><%= @trace.identifier %></h2>
+  <p style="margin: 0 0 16px; color: #6b7280; font-size: 12px;">
+    <%= @trace.id %> · <%= @trace.status %> · <%= @trace.duration_ms ? "#{@trace.duration_ms.round}ms" : 'N/A' %>
+    <% if @trace.correlation_id.present? %>
+      · <%= link_to "Follow chain", root_path(correlation_id: @trace.correlation_id) %>
+    <% end %>
+  </p>
+  <div class="timeline"><%= Formatters::Timeline.format(@trace) %></div>
+</div>
+
+<p style="margin-top: 16px;">
+  <%= link_to '← Back to traces', root_path %> ·
+  <%= link_to 'Compare with another trace', diff_path(a: @trace.id) %>
+</p>
