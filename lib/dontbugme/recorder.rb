@@ -3,7 +3,7 @@
 module Dontbugme
   class Recorder
     class << self
-      def record(kind:, identifier:, metadata: {}, &block)
+      def record(kind:, identifier:, metadata: {}, return_trace: false, &block)
         return yield unless Dontbugme.config.recording?
         return yield unless should_sample?
 
@@ -14,10 +14,10 @@ module Dontbugme
         trace = Trace.new(kind: kind, identifier: identifier, metadata: metadata)
         Context.current = trace
 
-        yield
+        result = yield
         trace.finish!
         persist(trace)
-        trace
+        return_trace ? trace : result
       rescue StandardError => e
         trace&.finish!(error: e)
         persist(trace) if trace && Dontbugme.config.record_on_error

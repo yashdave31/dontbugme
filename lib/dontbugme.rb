@@ -21,7 +21,7 @@ module Dontbugme
     end
 
     def trace(identifier, metadata: {}, &block)
-      Recorder.record(kind: :custom, identifier: identifier, metadata: metadata, &block)
+      Recorder.record(kind: :custom, identifier: identifier, metadata: metadata, return_trace: true, &block)
     end
 
     def span(name, payload: {}, &block)
