@@ -2,6 +2,55 @@
 
 A flight recorder for Rails applications. Reconstruct the full execution story of Sidekiq jobs and HTTP requests — see exactly what database queries ran, what HTTP services were called, what exceptions were raised, with source locations pointing to your code.
 
+## Quick Start
+
+Get up and running in under 2 minutes:
+
+**1. Add the gem and install**
+
+```ruby
+# Gemfile
+gem 'dontbugme'
+```
+
+```bash
+bundle install
+```
+
+**2. Run the installer** (creates config and mounts the Web UI)
+
+```bash
+rails g dontbugme:install
+```
+
+This adds `config/initializers/dontbugme.rb` and mounts the engine at `/inspector` in your routes.
+
+**3. Start your app and generate traffic**
+
+```bash
+rails s          # Start the server
+# In another terminal, if you use Sidekiq:
+bundle exec sidekiq
+```
+
+Make an HTTP request (visit a page, hit an API) or run a Sidekiq job. Dontbugme records automatically in development.
+
+**4. View traces**
+
+**Option A — Web UI (easiest):** Open [http://localhost:3000/inspector](http://localhost:3000/inspector) in your browser. Browse, search, and compare traces.
+
+**Option B — CLI:** From your Rails app root (so it finds the SQLite DB):
+
+```bash
+bundle exec dontbugme list                    # List recent traces
+bundle exec dontbugme show <trace_id>         # Show a trace
+bundle exec dontbugme search --status=error   # Find failed traces
+```
+
+That's it. No database migrations needed — SQLite is used by default in development (`tmp/inspector/inspector.db`).
+
+---
+
 ## Installation
 
 Add to your Gemfile:
@@ -14,6 +63,7 @@ Then run:
 
 ```bash
 bundle install
+rails g dontbugme:install
 ```
 
 ## Usage
@@ -113,29 +163,20 @@ bundle exec dontbugme trace tr_request_id --follow
 
 Shows all traces (request + enqueued jobs) with the same correlation ID. Correlation IDs are automatically propagated from HTTP requests to Sidekiq jobs (and from job to child job) when using the Rails integration.
 
-### Web UI (optional)
+### Web UI
 
-A lightweight web interface to browse traces. **Disabled by default in production.** Enable in development:
+A lightweight web interface to browse traces. The installer mounts it at `/inspector`. It's **enabled by default in development** and **disabled in production**.
 
-```ruby
-# config/initializers/dontbugme.rb
-Dontbugme.configure do |config|
-  config.enable_web_ui = true  # default: true in dev, false in prod
-  config.web_ui_mount_path = '/inspector'
-end
-```
-
-Add to `config/routes.rb`:
+Visit `/inspector` to browse traces, search, and compare. Tweak in `config/initializers/dontbugme.rb`:
 
 ```ruby
-mount Dontbugme::Engine, at: '/inspector' if Dontbugme.config.enable_web_ui
+config.enable_web_ui = true
+config.web_ui_mount_path = '/inspector'
 ```
-
-Then visit `/inspector` to browse traces, search, and compare.
 
 ### Configuration
 
-Create `config/initializers/dontbugme.rb`:
+Edit `config/initializers/dontbugme.rb` (created by the installer):
 
 ```ruby
 Dontbugme.configure do |config|
@@ -153,15 +194,85 @@ end
 - **PostgreSQL**: Uses your Rails DB. Set `config.store = :postgresql`
 - **Memory**: For tests. Traces lost on process exit.
 
-## Cleanup
+## Production
 
-Traces are ephemeral. Run cleanup to enforce retention:
+In production, Dontbugme uses safer defaults: PostgreSQL storage, async writes, selective recording, and the Web UI disabled. No extra setup is required if you use PostgreSQL — the gem creates the `dontbugme_traces` table automatically.
+
+### Default production behavior
+
+- **Store**: PostgreSQL (uses your Rails DB connection)
+- **Web UI**: Disabled — enable only if you add authentication
+- **Recording**: Selective — always records failures (`record_on_error`), samples successful traces
+- **Async writes**: Enabled to avoid blocking requests/jobs
+
+### Recommended configuration
 
 ```ruby
+# config/initializers/dontbugme.rb
+Dontbugme.configure do |config|
+  config.store = :postgresql
+  config.async_store = true
+
+  # Sample 5% of successful traces to limit storage
+  config.recording_mode = :selective
+  config.sample_rate = 0.05
+  config.record_on_error = true   # Always capture failures
+
+  # Optional: record only specific jobs
+  # config.record_jobs = %w[SendInvoiceJob ProcessPaymentJob]
+  # config.record_requests = :all  # or a proc for custom logic
+end
+```
+
+### Enabling the Web UI in production
+
+If you need the Web UI in production (e.g. for on-call debugging), **protect it with authentication**:
+
+```ruby
+# config/initializers/dontbugme.rb
+Dontbugme.configure do |config|
+  config.enable_web_ui = true
+  config.web_ui_mount_path = '/inspector'
+end
+```
+
+Then add authentication in your routes (e.g. with Devise, `authenticate` before the mount, or HTTP basic auth via a constraint).
+
+### Cleanup and retention
+
+Production defaults to 24-hour retention. Schedule cleanup to enforce it:
+
+```ruby
+# config/schedule.rb (whenever) or a Sidekiq cron job
 Dontbugme::CleanupJob.perform
 ```
 
-Schedule via cron or Sidekiq to run periodically.
+Example with Sidekiq:
+
+```ruby
+# app/jobs/dontbugme_cleanup_job.rb
+class DontbugmeCleanupJob < ApplicationJob
+  queue_as :low
+
+  def perform
+    Dontbugme::CleanupJob.perform
+  end
+end
+# Schedule daily via sidekiq-cron, whenever, or similar
+```
+
+### CLI in production
+
+Run the CLI from your production app directory (or a deploy host with DB access). It uses your Rails DB config:
+
+```bash
+RAILS_ENV=production bundle exec dontbugme list
+RAILS_ENV=production bundle exec dontbugme search --status=error --limit=50
+```
+
+## Cleanup
+
+Traces are ephemeral. Run `Dontbugme::CleanupJob.perform` to enforce retention. See [Production](#production) for scheduling via Sidekiq or cron.
 
 ## Requirements
 
