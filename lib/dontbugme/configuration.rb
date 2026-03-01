@@ -18,6 +18,7 @@ module Dontbugme
                   :capture_redis_values,
                   :capture_redis_return_values,
                   :capture_span_output,
+                  :capture_variable_changes,
                   :source_mode,
                   :source_filter,
                   :source_depth,
@@ -67,6 +68,7 @@ module Dontbugme
       self.capture_redis_values = false
       self.capture_redis_return_values = true
       self.capture_span_output = true
+      self.capture_variable_changes = true
       self.source_mode = :full
       self.source_filter = %w[app/ lib/]
       self.source_depth = 3
@@ -89,6 +91,7 @@ module Dontbugme
       self.recording_mode = :off
       self.enable_web_ui = false
       self.record_on_error = false
+      self.capture_variable_changes = false
       self.max_trace_buffer_bytes = 5 * 1024 * 1024 # 5 MB
     end
 
@@ -101,6 +104,7 @@ module Dontbugme
       self.capture_sql_binds = false
       self.capture_redis_return_values = false
       self.capture_span_output = false
+      self.capture_variable_changes = false
       self.source_mode = :shallow
       self.source_depth = 1
       self.source_stack_limit = 30

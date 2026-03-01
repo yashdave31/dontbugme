@@ -13,6 +13,7 @@ module Dontbugme
 
         trace = Trace.new(kind: kind, identifier: identifier, metadata: metadata)
         Context.current = trace
+        VariableTracker.clear_state! if defined?(VariableTracker)
 
         result = yield
         trace.finish!

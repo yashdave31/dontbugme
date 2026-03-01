@@ -113,11 +113,12 @@ class SeedController < ApplicationController
       metadata: { customer_tier: 'enterprise' },
       spans: [
         custom_span(0, 12.5, 'Validate cart'),
-        custom_span(15, 8.2, 'Calculate tax'),
-        snapshot_span(25, { user_id: 42, cart_total: 199.99, items: 3 }),
-        sql_span(30, 45.2, 'INSERT INTO orders (user_id, total, created_at) VALUES (?, ?, ?)', binds: [42, 199.99, Time.now]),
-        redis_span(80, 2.1, 'DEL', 'cart:42'),
-        cache_span(85, 0.3, 'write', 'user:42:last_order')
+        observe_span(15, 8.2, 'token increment', 'abc123', 'abc124'),
+        custom_span(25, 8.2, 'Calculate tax'),
+        snapshot_span(33, { user_id: 42, cart_total: 199.99, items: 3 }),
+        sql_span(40, 45.2, 'INSERT INTO orders (user_id, total, created_at) VALUES (?, ?, ?)', binds: [42, 199.99, Time.now]),
+        redis_span(90, 2.1, 'DEL', 'cart:42'),
+        cache_span(95, 0.3, 'write', 'user:42:last_order')
       ],
       truncated_spans_count: 0
     )
@@ -226,6 +227,19 @@ class SeedController < ApplicationController
       started_at: offset.to_f,
       duration_ms: duration,
       source: 'app/services/checkout_service.rb:33 in `process`'
+    }
+  end
+
+  def observe_span(offset, duration, name, input, output)
+    {
+      id: "sp_#{SecureRandom.hex(4)}",
+      category: :custom,
+      operation: 'span',
+      detail: name,
+      payload: { input: input.to_s, output: output.to_s },
+      started_at: offset.to_f,
+      duration_ms: duration,
+      source: 'app/models/member.rb:12 in `increment_confirmation_token`'
     }
   end
 

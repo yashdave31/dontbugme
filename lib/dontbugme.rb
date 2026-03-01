@@ -48,6 +48,16 @@ module Dontbugme
       result
     end
 
+    # Captures input and output of in-house calculations for value transformation inspection.
+    # Example: token = Dontbugme.observe('token increment', token) { token + 1 }
+    def observe(name, input = nil, &block)
+      return yield unless Context.active?
+
+      payload = {}
+      payload[:input] = format_output_value(input) unless input.nil?
+      span(name, payload: payload, capture_output: true, &block)
+    end
+
     def snapshot(data)
       return unless Context.active?
 
@@ -136,6 +146,7 @@ end
 require 'dontbugme/version'
 require 'dontbugme/configuration'
 require 'dontbugme/span'
+require 'dontbugme/variable_tracker'
 require 'dontbugme/span_collection'
 require 'dontbugme/trace'
 require 'dontbugme/context'

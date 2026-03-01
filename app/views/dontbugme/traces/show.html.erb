@@ -4,6 +4,7 @@
     <div class="trace-meta">
       <span class="badge <%= @trace.status == :success ? 'badge-success' : 'badge-error' %>"><%= @trace.status %></span>
       <span class="trace-meta-item"><%= @trace.duration_ms ? "#{@trace.duration_ms.round}ms" : 'N/A' %></span>
+      <span class="trace-meta-item trace-timestamp" title="<%= trace_started_at_formatted(@trace) %>"><%= trace_started_at_formatted(@trace) %></span>
       <span class="trace-meta-item"><%= @trace.id %></span>
       <% if @trace.correlation_id.present? %>
         <%= link_to "Follow chain", root_path(correlation_id: @trace.correlation_id), class: 'trace-link' %>
@@ -35,6 +36,7 @@
   <% spans_to_show.each_with_index do |span, idx| %>
     <details class="span-card card" data-category="<%= span.category %>">
       <summary class="span-summary">
+        <span class="span-timestamp" title="<%= trace_started_at_formatted(@trace) %>"><%= span_timestamp_formatted(@trace, span) %></span>
         <span class="span-offset"><%= span.started_at.to_f.round(1) %>ms</span>
         <span class="span-duration"><%= span.duration_ms ? "#{span.duration_ms.round(1)}ms" : '-' %></span>
         <span class="badge <%= span_category_badge_class(span.category) %>"><%= span.category.to_s.upcase %></span>
@@ -42,6 +44,12 @@
         <span class="span-detail-preview"><%= truncate_detail(span.detail, 80) %></span>
       </summary>
       <div class="span-details">
+        <% if span_input(span).present? %>
+          <div class="span-section span-input-section">
+            <h4>Input <button type="button" class="copy-btn" data-copy-target="input-<%= idx %>" title="Copy">Copy</button></h4>
+            <pre class="code-block input-block" id="input-<%= idx %>"><code><%= h(span_input(span)) %></code></pre>
+          </div>
+        <% end %>
         <% if span_output(span).present? %>
           <div class="span-section span-output-section">
             <h4>Output <button type="button" class="copy-btn" data-copy-target="output-<%= idx %>" title="Copy">Copy</button></h4>
@@ -81,7 +89,7 @@
 <% end %>
 
 <div class="trace-footer">
-  <p>Filter by category: <%= link_to 'All', trace_path(@trace.id) %> · <%= link_to 'SQL', trace_path(@trace.id, only: 'sql') %> · <%= link_to 'HTTP', trace_path(@trace.id, only: 'http') %> · <%= link_to 'Redis', trace_path(@trace.id, only: 'redis') %> · <%= link_to 'Cache', trace_path(@trace.id, only: 'cache') %> · <%= link_to 'Mailer', trace_path(@trace.id, only: 'mailer') %> · <%= link_to 'Enqueue', trace_path(@trace.id, only: 'enqueue') %></p>
+  <p>Filter by category: <%= link_to 'All', trace_path(@trace.id) %> · <%= link_to 'SQL', trace_path(@trace.id, only: 'sql') %> · <%= link_to 'HTTP', trace_path(@trace.id, only: 'http') %> · <%= link_to 'Redis', trace_path(@trace.id, only: 'redis') %> · <%= link_to 'Cache', trace_path(@trace.id, only: 'cache') %> · <%= link_to 'Mailer', trace_path(@trace.id, only: 'mailer') %> · <%= link_to 'Enqueue', trace_path(@trace.id, only: 'enqueue') %> · <%= link_to 'Custom', trace_path(@trace.id, only: 'custom') %> · <%= link_to 'Snapshot', trace_path(@trace.id, only: 'snapshot') %></p>
 </div>
 
 <% if @trace.error.present? %>

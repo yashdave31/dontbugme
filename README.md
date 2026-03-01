@@ -128,6 +128,26 @@ end
 
 Use `capture_output: false` to skip capturing the return value for sensitive data.
 
+### Automatic Variable Tracking
+
+Dontbugme automatically captures local variable changes between lines in your app code. No manual instrumentation needed — when a variable like `token` changes from `abc123` to `abc124`, you'll see an observe span with Input and Output in the UI.
+
+```ruby
+token = Member.find(1).confirmation_token
+token += 1
+Member.find(1).update(confirmation_token: token)
+```
+
+The UI will show both **Input** and **Output** for the transformation. Enabled by default in development; disable with `config.capture_variable_changes = false`. Only tracks simple types (String, Integer, Float, etc.) to avoid noise.
+
+### Manual Observe (optional)
+
+For explicit control, use `Dontbugme.observe`:
+
+```ruby
+token = Dontbugme.observe('token increment', token) { token + 1 }
+```
+
 ### Span Categories
 
 Access spans by category for assertions or analysis:

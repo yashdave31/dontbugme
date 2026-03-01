@@ -22,6 +22,7 @@
         <span class="trace-identifier"><%= trace.identifier %></span>
         <span class="badge <%= trace.status == :success ? 'badge-success' : 'badge-error' %>"><%= trace.status %></span>
         <span class="trace-duration"><%= trace.duration_ms ? "#{trace.duration_ms.round}ms" : '-' %></span>
+        <span class="trace-timestamp" title="<%= trace_started_at_formatted(trace) %>"><%= trace_started_at_short(trace) %></span>
       <% end %>
     <% end %>
   <% else %>

@@ -23,6 +23,7 @@ module Dontbugme
       Dontbugme::Subscribers::Cache.subscribe
       Dontbugme::Subscribers::ActionMailer.subscribe
       Dontbugme::Subscribers::ActiveJob.subscribe
+      Dontbugme::VariableTracker.subscribe
     end
 
     config.after_initialize do

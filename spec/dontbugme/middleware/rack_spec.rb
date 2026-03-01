@@ -56,4 +56,20 @@ RSpec.describe Dontbugme::Middleware::Rack do
     expect(last_response.status).to eq(200)
     expect(last_response.body).to eq('Hello')
   end
+
+  it 'does not record traces for requests to the web UI mount path' do
+    Dontbugme.config.web_ui_mount_path = '/inspector'
+    get '/inspector'
+    expect(last_response.status).to eq(200)
+    traces = Dontbugme.store.search(limit: 10)
+    expect(traces.none? { |t| t.identifier.include?('/inspector') }).to be true
+  end
+
+  it 'does not record traces for requests under the web UI mount path' do
+    Dontbugme.config.web_ui_mount_path = '/inspector'
+    get '/inspector/traces/tr_abc123'
+    expect(last_response.status).to eq(200)
+    traces = Dontbugme.store.search(limit: 10)
+    expect(traces.none? { |t| t.identifier.include?('/inspector') }).to be true
+  end
 end
