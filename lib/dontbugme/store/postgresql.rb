@@ -17,14 +17,14 @@ module Dontbugme
         params = [
           data[:id],
           data[:kind].to_s,
-          data[:identifier],
+          JsonSafe.sanitize_string(data[:identifier].to_s),
           data[:status].to_s,
           data[:started_at],
           data[:duration_ms],
           correlation_id,
-          data[:metadata].to_json,
-          data[:spans].to_json,
-          data[:error]&.to_json
+          JsonSafe.sanitize(data[:metadata]).to_json,
+          JsonSafe.sanitize(data[:spans]).to_json,
+          data[:error] ? JsonSafe.sanitize(data[:error]).to_json : nil
         ]
         exec_params(<<~SQL, params)
           INSERT INTO dontbugme_traces

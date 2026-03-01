@@ -15,19 +15,25 @@ module Dontbugme
       def save_trace(trace)
         data = trace.to_h
         correlation_id = data[:correlation_id] || data[:metadata]&.dig(:correlation_id)
+        metadata_json = json_safe(data[:metadata])
+        spans_json = json_safe(data[:spans])
+        error_json = data[:error] ? json_safe(data[:error]) : nil
         db.execute(
           'INSERT OR REPLACE INTO traces (id, kind, identifier, status, started_at, duration_ms, correlation_id, metadata_json, spans_json, error_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           data[:id],
           data[:kind].to_s,
-          data[:identifier],
+          sanitize_identifier(data[:identifier]),
           data[:status].to_s,
           data[:started_at],
           data[:duration_ms],
           correlation_id,
-          data[:metadata].to_json,
-          data[:spans].to_json,
-          data[:error]&.to_json
+          metadata_json,
+          spans_json,
+          error_json
         )
+      rescue SQLite3::ReadOnlyException
+        # Database is read-only (e.g. production deploy with SQLite on read-only filesystem).
+        # Silently skip persistence to avoid crashing the app.
       end
 
       def find_trace(trace_id)
@@ -106,6 +112,16 @@ module Dontbugme
         db.execute('CREATE INDEX IF NOT EXISTS idx_traces_started_at ON traces(started_at)')
         db.execute('CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status)')
         db.execute('CREATE INDEX IF NOT EXISTS idx_traces_correlation_id ON traces(correlation_id)')
+      end
+
+      def json_safe(obj)
+        JsonSafe.sanitize(obj).to_json
+      end
+
+      def sanitize_identifier(str)
+        return str if str.nil?
+
+        JsonSafe.sanitize_string(str.to_s)
       end
 
       def migrate_add_correlation_id
